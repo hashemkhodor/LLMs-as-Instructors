@@ -1,7 +1,7 @@
 import os
 import time
 import copy
-import openai
+# import openai
 import json
 import sys
 import random
@@ -10,21 +10,34 @@ import math
 import re
 import argparse
 import backoff 
+import cohere
 import jsonlines
 from tqdm import tqdm
 import concurrent.futures
 
-openai.api_key = os.getenv('OPENAI_API_KEY')
-@backoff.on_exception(backoff.expo, (openai.error.RateLimitError, openai.error.Timeout, openai.error.APIError, openai.error.ServiceUnavailableError))
-def llm(message):
-    response = openai.ChatCompletion.create(
-    model="gpt-4-0125-preview",
-    messages = message,
-    temperature = 0.8,
-    max_tokens = 4095
-    )
-    return response['choices'][0]['message']['content']
+cohere_api_key = os.getenv('COHERE_API_KEY')
 
+co = cohere.Client(
+    api_key=cohere_api_key,
+)
+
+@backoff.on_exception(backoff.expo, (
+    cohere.TooManyRequestsError, cohere.ServiceUnavailableError)
+    )
+def llm(message):
+    response: cohere.NonStreamedChatResponse = co.chat(
+        co = message,
+        temperature=0.8,
+        max_tokens=4095
+        # model=
+    )
+    #  openai.ChatCompletion.create(
+        # model="gpt-4-0125-preview",
+        # messages=message,
+        # temperature=0.8,
+        # max_tokens=4095
+    # )
+    return response.text
 
 def process(sample):
     """
